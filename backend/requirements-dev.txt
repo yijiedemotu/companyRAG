@@ -1,0 +1,15 @@
+# KnowFlow 开发期依赖（测试 / lint / 类型检查 / 文档校验）
+# 安装：python -m pip install -r backend/requirements-dev.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+-r requirements.txt
+
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.16.10
+mypy==2.4.0
+
+# 文档质量门（`scripts/check_docs.py`）用它解析 HTML：
+# 校验"HTML 是否自包含（没有外链 CDN）"、"目录锚点是否都能跳过去"、"id 有无重复"。
+# 这三条靠正则做不可靠（HTML 不是正则语言），所以需要真正的解析器。
+# 没装也能跑 —— 脚本会跳过 HTML 那一节并明确说明。
+lxml==6.1.0

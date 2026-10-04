@@ -1,0 +1,37 @@
+{
+  "service": {
+    "name": "knowflow-api",
+    "version": "1.0.0",
+    "owner": "平台研发组",
+    "oncall": {
+      "primary": "张伟",
+      "phone": "13800000001",
+      "backup": "李娜",
+      "backup_phone": "13800000002"
+    }
+  },
+  "limits": {
+    "max_upload_mb": 20,
+    "rate_limit_per_minute": 60,
+    "max_concurrent_streams": 100,
+    "request_timeout_seconds": 60
+  },
+  "retrieval": {
+    "top_k": 5,
+    "fetch_k": 20,
+    "fusion": "rrf",
+    "vector_min_score": 0.35,
+    "keyword_min_coverage": 0.25,
+    "rerank_enabled": true
+  },
+  "dependencies": [
+    {"name": "mysql", "version": "8.0.34", "critical": true},
+    {"name": "chroma", "version": "1.5.9", "critical": false},
+    {"name": "bge-m3", "version": "1.0", "critical": false}
+  ],
+  "alerts": {
+    "p95_latency_ms": 8000,
+    "error_rate_percent": 2,
+    "daily_cost_usd": 50
+  }
+}

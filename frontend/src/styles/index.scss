@@ -1,0 +1,281 @@
+/**
+ * 全局样式：设计变量 + 暗色适配 + 通用工具类。
+ *
+ * 暗色策略：默认跟随系统 `prefers-color-scheme`，同时支持 `<html class="dark">` 手动切换。
+ * 业务样式只使用这里的 CSS 变量，不在组件里写死颜色，保证两套主题都不跑样。
+ */
+
+:root {
+  /* 品牌色 */
+  --kf-primary: #2563eb;
+  --kf-primary-soft: #dbeafe;
+  --kf-success: #16a34a;
+  --kf-warning: #d97706;
+  --kf-danger: #dc2626;
+  --kf-info: #64748b;
+
+  /* 背景层次 */
+  --kf-bg-body: #f5f7fa;
+  --kf-bg-card: #ffffff;
+  --kf-bg-subtle: #f8fafc;
+  --kf-bg-hover: #f1f5f9;
+
+  /* 文本层次 */
+  --kf-text-primary: #0f172a;
+  --kf-text-regular: #334155;
+  --kf-text-secondary: #64748b;
+  --kf-text-placeholder: #94a3b8;
+
+  /* 边框与阴影 */
+  --kf-border: #e2e8f0;
+  --kf-border-strong: #cbd5e1;
+  --kf-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --kf-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* 尺寸 */
+  --kf-radius: 8px;
+  --kf-radius-sm: 4px;
+  --kf-header-height: 56px;
+  --kf-sidebar-width: 220px;
+
+  /* 字号 */
+  --kf-font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+
+  /* 语义色（引用角标、span 类型） */
+  --kf-citation-bg: #dbeafe;
+  --kf-citation-text: #1d4ed8;
+  --kf-citation-active: #fbbf24;
+
+  --kf-span-node: #2563eb;
+  --kf-span-llm: #7c3aed;
+  --kf-span-retrieval: #0891b2;
+  --kf-span-db: #ca8a04;
+  --kf-span-tool: #059669;
+}
+
+html.dark {
+  --kf-primary: #60a5fa;
+  --kf-primary-soft: #1e3a8a;
+  --kf-success: #4ade80;
+  --kf-warning: #fbbf24;
+  --kf-danger: #f87171;
+  --kf-info: #94a3b8;
+
+  --kf-bg-body: #0f172a;
+  --kf-bg-card: #1e293b;
+  --kf-bg-subtle: #172033;
+  --kf-bg-hover: #263349;
+
+  --kf-text-primary: #f1f5f9;
+  --kf-text-regular: #cbd5e1;
+  --kf-text-secondary: #94a3b8;
+  --kf-text-placeholder: #64748b;
+
+  --kf-border: #334155;
+  --kf-border-strong: #475569;
+  --kf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --kf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  --kf-citation-bg: #1e3a8a;
+  --kf-citation-text: #bfdbfe;
+  --kf-citation-active: #f59e0b;
+
+  --kf-span-node: #60a5fa;
+  --kf-span-llm: #a78bfa;
+  --kf-span-retrieval: #22d3ee;
+  --kf-span-db: #facc15;
+  --kf-span-tool: #34d399;
+}
+
+/* 系统暗色兜底：用户没手动设置时才跟随系统 */
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    --kf-primary: #60a5fa;
+    --kf-primary-soft: #1e3a8a;
+    --kf-success: #4ade80;
+    --kf-warning: #fbbf24;
+    --kf-danger: #f87171;
+    --kf-info: #94a3b8;
+
+    --kf-bg-body: #0f172a;
+    --kf-bg-card: #1e293b;
+    --kf-bg-subtle: #172033;
+    --kf-bg-hover: #263349;
+
+    --kf-text-primary: #f1f5f9;
+    --kf-text-regular: #cbd5e1;
+    --kf-text-secondary: #94a3b8;
+    --kf-text-placeholder: #64748b;
+
+    --kf-border: #334155;
+    --kf-border-strong: #475569;
+    --kf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --kf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+    --kf-citation-bg: #1e3a8a;
+    --kf-citation-text: #bfdbfe;
+    --kf-citation-active: #f59e0b;
+
+    --kf-span-node: #60a5fa;
+    --kf-span-llm: #a78bfa;
+    --kf-span-retrieval: #22d3ee;
+    --kf-span-db: #facc15;
+    --kf-span-tool: #34d399;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--kf-bg-body);
+  color: var(--kf-text-primary);
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--kf-primary);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------ 通用布局工具 */
+
+.kf-page {
+  padding: 16px 20px 32px;
+}
+
+.kf-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kf-page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--kf-text-primary);
+}
+
+.kf-page-subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--kf-text-secondary);
+}
+
+.kf-card {
+  background: var(--kf-bg-card);
+  border: 1px solid var(--kf-border);
+  border-radius: var(--kf-radius);
+  box-shadow: var(--kf-shadow-sm);
+}
+
+.kf-card + .kf-card {
+  margin-top: 16px;
+}
+
+.kf-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kf-border);
+  font-weight: 600;
+  color: var(--kf-text-primary);
+}
+
+.kf-card-title h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.kf-card-body {
+  padding: 16px;
+}
+
+.kf-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.kf-grid--2 {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.kf-grid--4 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.kf-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kf-spacer {
+  flex: 1 1 auto;
+}
+
+.kf-muted {
+  color: var(--kf-text-secondary);
+}
+
+.kf-mono {
+  font-family: var(--kf-font-mono);
+  font-size: 12px;
+}
+
+.kf-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kf-pre {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--kf-bg-subtle);
+  border: 1px solid var(--kf-border);
+  border-radius: var(--kf-radius-sm);
+  font-family: var(--kf-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 240px;
+  overflow: auto;
+  color: var(--kf-text-regular);
+}
+
+.kf-empty-hint {
+  color: var(--kf-text-secondary);
+  font-size: 13px;
+}
+
+/* 让 Element Plus 的表格跟随主题变量 */
+.el-table {
+  --el-table-border-color: var(--kf-border);
+  --el-table-header-bg-color: var(--kf-bg-subtle);
+}
+
+.el-card {
+  --el-card-bg-color: var(--kf-bg-card);
+}

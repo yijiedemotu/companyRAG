@@ -1,0 +1,151 @@
+# =====================================================================================
+# KnowFlow .gitignore
+#
+# 分三类：
+#   1. 工具产物（Python / Node / 编辑器）—— 全都不该进库
+#   2. **运行期数据** —— 上传的原文件、向量库、checkpointer，体积大且含用户内容
+#   3. 临时验证脚本与临时输出 —— 调试时随手写的，不该被当成项目资产
+#
+# ⚠ 同一条规则的两面：`data/` 下**大部分**是运行期数据，但 `data/samples/`、
+#    `data/eval_cases.jsonl`、`data/threshold_calibration.json` 是**仓库资产**
+#    （样例文档、标注集、标定结果，评测脚本依赖它们），必须提交。
+#    所以下面用的是"精确黑名单"而不是笼统的 `data/`。
+# =====================================================================================
+
+# ------------------------------------ Python ------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+pip-wheel-metadata/
+
+# 类型检查 / lint / 测试缓存
+.mypy_cache/
+.dmypy.json
+.ruff_cache/
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# ------------------------------------ Node / 前端 ------------------------------------
+node_modules/
+frontend/dist/
+frontend/.vite/
+.vite/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.*.local
+*.tsbuildinfo
+.pnpm-store/
+
+# ------------------------------------ 编辑器 / 操作系统 ------------------------------------
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ------------------------------------ 配置与密钥 ------------------------------------
+# 真实配置只在本机，绝不进库
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+# ⚠ 但配置**样例**是文档，必须提交（它是配置项的唯一权威说明）
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# ------------------------------------ 运行期数据（体积大 / 含用户内容） ------------------------------------
+# 向量库（Chroma 单机文件型，重建成本高但可重建）
+data/chroma/
+# 上传的原文件（按 sha256 分片存放）
+data/uploads/
+# SQLite 库：LangGraph checkpointer
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+# 冒烟自检用的隔离目录（scripts/smoke_pipeline.py 每次运行前清空）
+# _smoke      = 本地 BGE-M3 模型下的冒烟
+# _smoke_hash = EMBEDDING_PROVIDER=hash 下的冒烟（CI 用这条路径）
+data/_smoke/
+data/_smoke_hash/
+data/_eval_runs/
+# 后端侧 data 目录（在 backend/ 下运行时用的相对路径），规则与上面一组对齐
+# 下划线前缀 = 调试探针（如 _probe3），同「临时验证脚本」一节的约定
+backend/data/_*
+backend/data/uploads/
+backend/data/chroma/
+backend/data/*.sqlite*
+backend/data/*.db*
+# 上传/临时目录
+tmp/
+temp/
+
+# ⚠ 以下**不忽略**（仓库资产，评测与标定依赖，必须提交）：
+#   data/samples/*.md|.csv|.json   样例文档，calibrate_threshold.py 用真实解析器切它们
+#   data/eval_cases.jsonl          43 条标注用例（含同义改写/专有名词/多跳三类难点）
+#   data/threshold_calibration.json 阈值标定结果（阈值 vs 召回率/误放行率曲线）
+#   data/eval_report.json          四模式消融报告（含逐条 recall，可复核 bootstrap 检验）
+!data/samples/
+!data/eval_cases.jsonl
+!data/threshold_calibration.json
+!data/eval_report.json
+
+# ------------------------------------ 日志 ------------------------------------
+*.log
+logs/
+backend/logs/
+
+# ------------------------------------ 临时验证脚本与临时输出 ------------------------------------
+# 冒烟脚本把 stdout/stderr 落到这里便于排查，属临时产物
+backend/scripts/_smoke_out.txt
+backend/scripts/_smoke_err.txt
+backend/scripts/_smoke_hash_out.txt
+backend/scripts/_smoke_hash_err.txt
+backend/scripts/_smoke_*.txt
+# 调试期随手写的验证脚本（下划线前缀 = 临时，不进库）
+_tmp_*.py
+_check_*.py
+_verify_*.py
+backend/scripts/_tmp_*.py
+backend/scripts/_check_*.py
+backend/scripts/_verify_*.py
+
+# ------------------------------------ 模型权重 ------------------------------------
+# BGE-M3 权重约 2GB，放数据卷里，绝不进库
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# ------------------------------------ 其它 ------------------------------------
+*.orig
+*.rej

@@ -1,0 +1,227 @@
+# =====================================================================================
+# KnowFlow 后端工程配置（唯一的工具链真相来源）。
+#
+# 这里管三件事：
+#   1. 依赖声明（dependencies 与 backend/requirements.txt 逐条对齐，改一处要同时改两处）；
+#   2. ruff / mypy / pytest 的配置（CI 与本机都读这一份，不另开 setup.cfg / tox.ini）；
+#   3. 打包（hatchling，src 布局）。
+#
+# ⚠ 依赖版本的唯一权威仍然是 backend/requirements.txt（pip 安装用那份）。
+#    本文件的 [project].dependencies 是给 `pip install -e .` / 构建镜像用的副本，
+#    两者必须保持一致 —— 不一致时以 requirements.txt 为准。
+# =====================================================================================
+
+[project]
+name = "knowflow"
+version = "1.0.0"
+description = "企业知识库 RAG + LangGraph Agent 问答服务：混合检索（向量 + 自研 BM25 + RRF）、CRAG/Self-RAG 状态图、全链路可观测与可回归评测"
+readme = "../README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "KnowFlow" }]
+keywords = ["rag", "langgraph", "agent", "retrieval", "bm25", "fastapi"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+    "Private :: Do Not Upload",
+]
+
+# --------------------------------------------------------------------------------------
+# 运行期依赖：从 backend/requirements.txt 逐条抄过来，版本号保持一致。
+# 顺序也照抄，方便逐行对照。
+# --------------------------------------------------------------------------------------
+dependencies = [
+    # ---------- Web / API ----------
+    "fastapi==0.142.2",
+    "uvicorn[standard]==0.54.0",
+    "python-multipart==0.0.32",
+    "sse-starlette==3.5.0",
+
+    # ---------- 配置与校验 ----------
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+
+    # ---------- 关系库：MySQL 8 + SQLAlchemy 2.0 + Alembic ----------
+    "SQLAlchemy==2.0.51",
+    "alembic==1.18.5",
+    "PyMySQL==1.1.1",
+    "cryptography==50.0.2",
+    "aiosqlite==0.22.1",
+
+    # ---------- LLM 与 Agent 编排 ----------
+    "langchain==1.4.3",
+    "langchain-core==1.6.6",
+    "langchain-openai==1.6.7",
+    "langchain-text-splitters==1.1.3",
+    "langgraph==1.2.12",
+    "langgraph-checkpoint==4.2.0",
+    "langgraph-checkpoint-sqlite==3.1.1",
+    "openai==2.54.0",
+
+    # ---------- 向量化 + 向量库 ----------
+    # 只想先跑通链路、不想下 2GB 模型时：设 EMBEDDING_PROVIDER=hash，
+    # 代码里有哈希兜底实现，sentence-transformers / torch 都不需要装。
+    "sentence-transformers==6.1.0",
+    "chromadb==1.5.9",
+    "numpy==2.3.5",
+
+    # ---------- 文档解析 ----------
+    "pypdf==6.19.0",
+
+    # ---------- 可观测 ----------
+    "structlog==26.1.0",
+
+    # ---------- 安全 ----------
+    "PyJWT==2.15.1",
+    "bcrypt==5.0.0",
+
+    # ---------- 工具 ----------
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+# 版本同 backend/requirements-dev.txt
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.16.10",
+    "mypy==2.4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowflow"]
+
+# ======================================================================================
+# ruff
+# ======================================================================================
+
+[tool.ruff]
+# ⚠ line-length = 100 是本仓库的**事实口径**，不是随手填的数：
+#   源码里有大量中文注释/文档字符串，ruff 按 **unicode 显示宽度** 计数（一个汉字 = 2 列），
+#   所以同样内容的行，中文比英文"长"一倍。88（ruff 默认）会让几乎所有带中文注释的
+#   文件都过不了；100 是本仓库现有代码实际排布出来的宽度。
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+extend-exclude = [
+    ".venv",
+    "alembic/versions",   # Alembic 自动生成的迁移脚本，格式由 alembic 模板决定，不参与人工 lint
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RET", "S"]
+# --------------------------------------------------------------------------------------
+# ignore 逐条都有原因，不是"为了过检查而关规则"。
+# 原则：**只关掉会误报、或者会迫使改写 src/ 现有实现的规则**；能改成零成本修好的没关。
+# --------------------------------------------------------------------------------------
+ignore = [
+    "E501",    # 行长由 [tool.ruff].line-length 统一管；再报一次是重复噪音
+    "S101",    # assert：测试与 schemas/__init__.py 的契约自证都在用，属正常用法
+    "B008",    # **必须 ignore**：FastAPI 的路由签名默认值是 `x: T = Depends(...)`，
+               # flake8-bugbear 把"函数调用作为默认值"判为 B008，会让**每一条路由**都报错。
+               # 这是 FastAPI 的官方推荐写法，不是 bug。
+    "S105",    # 误报：core/config.py 里 `jwt_secret` 的默认值 "change-me-in-production"
+               # 是"必须被改掉"的显式占位符（.env.example 与文档里都反复强调），
+               # 不是硬编码口令。真正的口令来自环境变量。
+    "S311",    # evaluation/stats.py 用 random 做 **bootstrap 置信区间重抽样**，
+               # 与密码学无关。换 secrets 反而会慢且不可复现（消融实验要可复现）。
+    "S110",    # observability/obs_bridge.py 的 `try/except/pass` 是**刻意的**：
+               # 埋点写库失败绝不能把用户的问答请求带崩。要改成 contextlib.suppress
+               # 或加 noqa 需动 src/ 源码，故此处先按现状关掉（已记入 roadmap）。
+    "SIM105",  # 同上：try/except/pass → contextlib.suppress 属纯风格改写，需改源码
+    "UP035",   # 从 typing 导入 Sequence：models 里是**运行期**要用的注解基类，
+               # 换 collections.abc 会连带影响 SQLAlchemy 的注解解析，不值得在此处冒险
+    "UP037",   # 去掉字符串注解的引号：models 里是**刻意**写成 "Mapped[str]" 字符串形式
+               # （前置引用 + 与 SQLAlchemy 2.0 文档示例一致），属风格偏好
+    "B007",    # 未使用的循环变量（`for position, ...`）在这里**是文档**，
+               # 保留名字让人一眼看出在遍历什么。改成 `_` 反而更难读
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试里 assert / 临时文件 / subprocess 都是正常手段，不按"生产安全规则"要求。
+#
+# N802（函数名必须小写）在 tests 下**刻意关掉**，理由不是"懒得改"：
+# 本项目的测试名**用中文写成一句可读的断言**（如 `test_无关问题被闸门拦下`），
+# 因为测试名是它唯一会被反复阅读的地方 —— 它应该当文档读。
+# PEP8 的 lowercase 规则是给 ASCII 标识符定的；中文没有大小写，这条规则在这里
+# 只会逼着人把 `test_无关问题被闸门拦下` 改成 `test_gate_rejects_irrelevant_question`，
+# 对中文读者的可读性反而下降。**这是有意的取舍，不是遗漏。**
+# 生产代码（src/）里仍然严格执行 N802。
+"tests/*" = ["S", "N802"]
+# 脚本是运维工具：要 print 给人看，且常有删临时目录、读写本地文件的操作
+"scripts/*" = ["S", "T201"]
+"alembic/env.py" = ["E402"]   # env.py 必须在改 sys.path 之后才能 import 项目模块
+
+[tool.ruff.lint.isort]
+known-first-party = ["knowflow"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# 与上方 line-length 保持一致；docstring 里的中文不重排
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = false
+
+# ======================================================================================
+# mypy
+# ======================================================================================
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+plugins = []
+show_error_codes = true
+pretty = true
+# ⚠ comparison-overlap 必须关掉，理由写在这里（这是唯一一个为了"不改源码"而关的检查）：
+#   schemas/__init__.py 第 136 行是**刻意的** import 期契约自证：
+#       assert MessageOut is not _CommonMessageOut, "..."
+#   两个类在类型上没有继承关系，strict 模式会判它"恒真的身份比较"。
+#   但这个 assert 的价值恰恰在于**运行期拿到的是哪个对象**，类型系统看不出来。
+#   删掉 assert 就等于删掉那道防线，所以选择关检查而不是改源码。
+disable_error_code = ["comparison-overlap"]
+
+[[tool.mypy.overrides]]
+# 这些库要么没有类型存根，要么存根质量参差。显式写出来是为了让"为什么这里不报错"有据可查
+# （全局 ignore_missing_imports 已开，这里是第二层明示，便于逐个放开）。
+module = [
+    "chromadb.*",
+    "sentence_transformers.*",
+    "torch.*",
+    "pypdf.*",
+    "langgraph.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+# 测试里为了构造边界数据，故意传错类型是常规操作
+disable_error_code = ["arg-type", "assignment"]
+
+# ======================================================================================
+# pytest
+# ======================================================================================
+# ⚠ 注意：如果 backend/pytest.ini 存在，它的**优先级高于本文件**，
+#   本节的 addopts / asyncio_mode 会被忽略（这是 pytest 的既定规则，不是 bug）。
+#   两者不冲突：pytest.ini 里别再设同名项即可。
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# asyncio_mode=auto：async def 测试函数不用逐个加 @pytest.mark.asyncio
+asyncio_mode = "auto"
+# -q 让 CI 日志短一些；--strict-markers 保证拼错的 marker 直接失败而不是静默跳过
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "integration: 需要 MySQL / 真实向量模型等外部依赖的用例（默认不下发）",
+    "slow: 单条耗时较长的用例",
+]

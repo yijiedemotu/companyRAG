@@ -1,0 +1,43 @@
+{"question": "一线城市住宿标准是多少", "ground_truth": "一线城市住宿标准为每晚 600 元。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 差旅报销标准"], "tags": ["factual"]}
+{"question": "出差住房费用最多能报多少", "ground_truth": "按城市等级：一线 600 元/晚、二线 450 元/晚、三线及以下 320 元/晚。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 差旅报销标准"], "tags": ["synonym"]}
+{"question": "二线城市的住宿和餐补分别是多少", "ground_truth": "二线城市住宿 450 元/晚，餐费补助 100 元/天。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 差旅报销标准"], "tags": ["factual"]}
+{"question": "北京上海的住宿标准一样吗", "ground_truth": "一样。北京和上海都属于一线城市，住宿标准均为每晚 600 元。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 差旅报销标准"], "tags": ["multi_hop"]}
+{"question": "三线城市每晚能报多少钱", "ground_truth": "三线及以下城市住宿标准为每晚 320 元。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 差旅报销标准"], "tags": ["factual"]}
+{"question": "总监出差能坐高铁一等座吗", "ground_truth": "可以。总监及以上可乘坐飞机经济舱与高铁一等座。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 交通费规定"], "tags": ["factual"]}
+{"question": "经理级别的交通工具标准是什么", "ground_truth": "经理及以下可乘坐飞机经济舱与高铁二等座。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 交通费规定"], "tags": ["factual"]}
+{"question": "晚上十一点到机场可以打车吗", "ground_truth": "可以。夜间 22:00 至次日 06:00 到达或出发可乘坐出租车，无需额外审批。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 交通费规定"], "tags": ["synonym"]}
+{"question": "报销申请要在多久之内提交", "ground_truth": "出差结束后 15 个工作日内提交。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 报销流程"], "tags": ["factual"]}
+{"question": "报销的钱什么时候到账", "ground_truth": "审批通过后，费用在次月 15 日随工资发放。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 报销流程"], "tags": ["synonym"]}
+{"question": "超过提交期限的报销怎么办", "ground_truth": "超过 15 个工作日未提交的，需要部门总监与财务负责人共同签批。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 报销流程"], "tags": ["factual"]}
+{"question": "电子发票截图可以报销吗", "ground_truth": "不可以。电子发票需提供 PDF 原件，截图与照片不予受理。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 发票要求"], "tags": ["factual"]}
+{"question": "住宿费发票需要注明什么", "ground_truth": "必须注明入住与离店日期。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 发票要求"], "tags": ["factual"]}
+{"question": "住宿和餐费可以合并成一天报销吗", "ground_truth": "不可以，住宿、餐费补助、市内交通需要在报销单中分行填写。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 常见问题"], "tags": ["factual"]}
+{"question": "出差遇到法定节假日餐补会加倍吗", "ground_truth": "不会。按实际出差日历天数计算，含法定节假日，不额外加倍。", "expected_doc": "员工报销制度.md", "expected_sections": ["员工报销制度 > 常见问题"], "tags": ["factual"]}
+{"question": "员工每年可以享受几天年假", "ground_truth": "按司龄：满 1 年不满 3 年 5 天，满 3 年不满 5 年 7 天，满 5 年不满 10 年 10 天，满 10 年以上 15 天。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 年假"], "tags": ["factual"]}
+{"question": "公司年假是怎么按工龄算的", "ground_truth": "按司龄分档，5/7/10/15 天四档。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 年假"], "tags": ["synonym"]}
+{"question": "七月入职当年能休几天年假", "ground_truth": "按剩余日历天数折算，不足 1 天不计入。例如 7 月 1 日入职、司龄不满 3 年，当年约 2.5 天，实际可休 2 天。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 常见问题"], "tags": ["multi_hop"]}
+{"question": "年假可以结转到明年吗", "ground_truth": "最多可将 5 天结转至次年第一季度使用，逾期作废。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 年假"], "tags": ["factual"]}
+{"question": "忘记打卡一个月能补几次", "ground_truth": "每月最多补卡 3 次，超过需要部门负责人说明原因。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 打卡规定"], "tags": ["factual"]}
+{"question": "上班时间是几点到几点", "ground_truth": "周一至周五 09:30 至 18:30，其中 12:00 至 13:30 为午休。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 工作时间"], "tags": ["factual"]}
+{"question": "研发可以弹性上班吗", "ground_truth": "可以。研发部门可申请弹性工作制，弹性区间 08:30 至 10:30 上班，需保证每日工作不少于 8 小时。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 工作时间"], "tags": ["factual"]}
+{"question": "陪产假有多少天", "ground_truth": "15 个工作日，需在子女出生后 3 个月内使用完毕。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 婚假、产假与陪产假"], "tags": ["factual"]}
+{"question": "加班怎么折算调休", "ground_truth": "工作日 1:1，休息日 1:1.5，法定节假日 1:3。调休需在加班后 6 个月内使用。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 加班与调休"], "tags": ["factual"]}
+{"question": "请假超过七点谁审批", "ground_truth": "7 天以上需人力资源部与分管副总共同审批。", "expected_doc": "考勤与休假管理办法.md", "expected_sections": ["考勤与休假管理办法 > 请假流程"], "tags": ["synonym"]}
+{"question": "PAYLOAD_TOO_LARGE 是什么错误", "ground_truth": "请求体超过网关上限（10MB）时返回的状态码，HTTP 413。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 错误码"], "tags": ["proper_noun"]}
+{"question": "接口返回 429 是什么原因", "ground_truth": "超过每分钟 60 次的调用限制，返回 429 RATE_LIMITED，响应头 Retry-After 给出建议重试秒数。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 限流与配额"], "tags": ["proper_noun"]}
+{"question": "stream 接口有哪些事件", "ground_truth": "meta、trace、tool、reflect、sources、token、done、end。sources 先于 token。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 问答（流式）"], "tags": ["proper_noun"]}
+{"question": "access_token 有效期多久", "ground_truth": "1440 分钟。过期后返回 401 UNAUTHORIZED，需要重新登录。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 鉴权"], "tags": ["proper_noun"]}
+{"question": "上传支持哪些文件格式", "ground_truth": "md、markdown、txt、pdf、csv、json 六种，单文件不超过 20MB。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 上传文档"], "tags": ["factual"]}
+{"question": "为什么排查问题要提供 request_id", "ground_truth": "服务端可据此定位全链路日志。", "expected_doc": "KnowFlow接口说明.md", "expected_sections": ["KnowFlow 开放接口说明 > 错误码"], "tags": ["factual"]}
+{"question": "入职第一天要带什么材料", "ground_truth": "身份证原件、学历证书原件、上一家公司离职证明，09:30 前到前台。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 入职第一天"], "tags": ["factual"]}
+{"question": "初始密码怎么拿到", "ground_truth": "以短信发送到入职登记表填写的手机号，首次登录必须修改密码。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 账号与权限开通"], "tags": ["factual"]}
+{"question": "试用期多久工资怎么算", "ground_truth": "试用期 3 个月，薪资为转正后的 80%。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 试用期"], "tags": ["factual"]}
+{"question": "提前转正需要什么条件", "ground_truth": "完成至少 1 个完整需求交付、代码评审通过率高于 90%、无严重线上事故。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 试用期"], "tags": ["factual"]}
+{"question": "每个月有餐补吗多少钱", "ground_truth": "每月 600 元，随工资发放。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 办公与福利"], "tags": ["synonym"]}
+{"question": "报销和请假分别看哪份制度", "ground_truth": "报销看《员工报销制度》，请假看《考勤与休假管理办法》。", "expected_doc": "新员工入职指南.md", "expected_sections": ["新员工入职指南 > 报销与请假"], "tags": ["multi_hop"]}
+{"question": "杭州的住宿标准是多少", "ground_truth": "杭州属于二线城市，住宿标准 450 元/晚，餐费补助 100 元/天。", "expected_doc": "差旅城市等级对照表.csv", "expected_sections": [], "tags": ["multi_hop"]}
+{"question": "洛阳属于几线城市 住宿能报多少", "ground_truth": "洛阳属于三线城市，住宿标准 320 元/晚。", "expected_doc": "差旅城市等级对照表.csv", "expected_sections": [], "tags": ["factual"]}
+{"question": "哪些城市算一线城市", "ground_truth": "北京、上海、广州、深圳。", "expected_doc": "差旅城市等级对照表.csv", "expected_sections": [], "tags": ["factual"]}
+{"question": "接口的限流阈值配置在哪", "ground_truth": "服务运行配置中的 limits.rate_limit_per_minute，默认 60。", "expected_doc": "服务运行配置.json", "expected_sections": [], "tags": ["proper_noun"]}
+{"question": "oncall 的主值班人是谁", "ground_truth": "张伟（13800000001），备份李娜。", "expected_doc": "服务运行配置.json", "expected_sections": [], "tags": ["proper_noun"]}
+{"question": "p95 延迟超过多少会告警", "ground_truth": "p95_latency_ms 阈值为 8000 毫秒。", "expected_doc": "服务运行配置.json", "expected_sections": [], "tags": ["proper_noun"]}

@@ -1,0 +1,222 @@
+# =====================================================================================
+# KnowFlow CI：三个 job（质量门 / 离线测试 / 前端构建）
+#
+# **核心设计原则：CI 零成本、零网络、不下载模型。**
+#
+# 具体做法（这三个环境变量是关键）：
+#     EMBEDDING_PROVIDER=hash      用确定性哈希向量，不加载 2GB 的 BGE-M3
+#     VECTOR_BACKEND=memory        向量库放内存，不需要 Chroma 持久化目录
+#     OPENAI_API_KEY=""            强制离线模式 → MockChatModel，不调任何外部 API
+#
+# 代价（诚实写在这里）：**CI 不校验真实的向量质量**。
+# 哈希向量没有语义能力，"检索准不准"在 CI 里是测不出来的。
+# 那部分由 `scripts/run_eval.py`（需要真模型）与 `scripts/calibrate_threshold.py`
+# 在有模型的机器上跑，属于"发版前人工执行"的一步，不是每次提交都做。
+#
+# ⚠ Docker 相关的验证（backend/Dockerfile、frontend/Dockerfile、docker-compose.yml）
+#   在开发机上**未实测**（没装 Docker）。这里刻意**不**加 docker build job：
+#   加一个没跑通过的 job 只会让 CI 常年红灯，不如先留白并在 README 里标注。
+# =====================================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支的新推送取消上一次未跑完的运行，省额度
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 全局降低 pip 噪音与超时风险
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_DEFAULT_TIMEOUT: "120"
+
+jobs:
+  # ------------------------------------------------------------------------------------
+  # job 1：静态质量门（ruff + ruff format + mypy strict）
+  #   不依赖数据库，跑得最快，失败最早 —— 放在最前面能最快给反馈
+  # ------------------------------------------------------------------------------------
+  lint:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      # 只装 lint 工具，不装 torch/chromadb —— 静态检查不需要它们
+      - name: Install lint tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff==0.16.10 mypy==2.4.0
+
+      - name: ruff check
+        working-directory: backend
+        run: python -m ruff check src
+
+      # line-length 读的是 backend/pyproject.toml（= 100）。
+      # ⚠ 注意：ruff 行宽按 unicode 宽度算，中文算 2 列，
+      #   所以中文注释多的文件用默认 88 会全红 —— 这也是把它写进配置的原因。
+      - name: ruff format check
+        working-directory: backend
+        run: python -m ruff format --check src
+
+      # ⚠ 需要项目依赖才能解析导入；用 --ignore-missing-imports 避免为了类型检查
+      #   装 2GB 的 torch。mypy 的目标是"本仓库自己的类型一致"，不是校验第三方存根。
+      - name: mypy (strict)
+        working-directory: backend
+        run: python -m mypy src/knowflow --ignore-missing-imports
+
+  # ------------------------------------------------------------------------------------
+  # job 2：离线测试（真正的质量门）
+  # ------------------------------------------------------------------------------------
+  test:
+    name: Offline tests (zero cost)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: "1234"
+          MYSQL_DATABASE: knowflow_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p1234"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --health-start-period=40s
+
+    env:
+      # ★ 这三行是"CI 零成本"的全部秘密
+      EMBEDDING_PROVIDER: hash
+      VECTOR_BACKEND: memory
+      OPENAI_API_KEY: ""
+      # 迁移与集成测试用同一个库；单元测试自己用 SQLite 内存库
+      DATABASE_URL: mysql+pymysql://root:1234@127.0.0.1:3306/knowflow_test?charset=utf8mb4
+      LOG_LEVEL: WARNING
+      # 关掉一切可能访问网络的东西
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # ⚠ requirements.txt 里有 sentence-transformers（会连带 torch）。
+          #   CI 里我们其实用不到它（EMBEDDING_PROVIDER=hash），
+          #   但为了"CI 装的依赖 == 生产装的依赖"这个一致性，还是照装 ——
+          #   代价是安装慢约 1~2 分钟。先装 CPU-only torch 能省掉 2GB 的 CUDA 包。
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install -r backend/requirements-dev.txt
+
+      - name: Apply migrations (alembic)
+        working-directory: backend
+        run: python -m alembic upgrade head
+
+      # 迁移与模型必须一致：跑一次 autogenerate，产出里如果有 op.* 就说明模型改了但没写迁移
+      - name: Check for model/migration drift
+        working-directory: backend
+        run: |
+          python -m alembic revision --autogenerate -m "ci drift check" > /tmp/drift.log 2>&1 || true
+          NEW_FILE=$(ls -t alembic/versions/*ci_drift_check*.py 2>/dev/null | head -1 || true)
+          if [ -z "$NEW_FILE" ]; then
+            echo "生成了迁移文件（说明存在 drift）"
+            exit 1
+          fi
+          # 迁移文件里除了 pass 没有别的操作 → 无 drift
+          if grep -qE '^\s+op\.' "$NEW_FILE"; then
+            echo "❌ 模型与迁移不一致（检测到未生成的 DDL 变更）："
+            grep -E '^\s+op\.' "$NEW_FILE"
+            exit 1
+          fi
+          echo "✅ 模型与迁移一致（无 drift）"
+          rm -f "$NEW_FILE"
+
+      - name: pytest
+        working-directory: backend
+        run: python -m pytest -q
+
+      # 鉴权审计：确认没有"忘了加鉴权"的端点。
+      # 这个门禁是**修出来的**——曾经有 21 个端点漏鉴权却不影响任何功能测试。
+      - name: Auth audit
+        working-directory: backend
+        env:
+          PYTHONPATH: src
+        run: python scripts/audit_auth.py
+
+      # 前后端路径对齐：前端调用的每个路径后端都得有。
+      # 静态检查（只读 OpenAPI + 前端源码），不需要数据库，也不需要起服务。
+      - name: API contract check
+        working-directory: backend
+        env:
+          PYTHONPATH: src
+        run: python scripts/check_api_contract.py
+
+      # 文档质量门：教程七节结构 / HTML 自包含与锚点 / **文档里的每个数字都能在 docs/03 追溯** /
+      # 文档引用的仓库路径真实存在。这一层是**修出来的**——它曾经抓出
+      # "docs/03 列了 16 个测试文件但实际只有 7 个"这种"照计划写而不是照产物写"的错误。
+      - name: Docs quality gate
+        working-directory: backend
+        env:
+          PYTHONPATH: src
+        run: python scripts/check_docs.py
+
+      # 链路冒烟：41 项断言。
+      # ⚠ 这一步之所以能在 CI 跑，正是因为 hash + memory + 无 Key 的组合
+      #   让"真实检索链路"完全离线可验证（脚本自己会用 data/_smoke 隔离目录）。
+      - name: Pipeline smoke (41 assertions)
+        working-directory: backend
+        env:
+          PYTHONPATH: src
+        run: python scripts/smoke_pipeline.py
+
+  # ------------------------------------------------------------------------------------
+  # job 3：前端构建（含 vue-tsc 严格类型检查）
+  # ------------------------------------------------------------------------------------
+  frontend:
+    name: Frontend build & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # build 脚本 = `vue-tsc --noEmit && vite build`，所以类型不过就不会通过
+      - name: Build (includes strict type check)
+        working-directory: frontend
+        run: pnpm build
+
+      # SSE 增量解析的单元自测：它直接 import 浏览器里跑的同一份源码
+      - name: SSE parser self-test
+        working-directory: frontend
+        run: node scripts/sse-selftest.mjs

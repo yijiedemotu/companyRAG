@@ -1,0 +1,139 @@
+# =====================================================================================
+# KnowFlow 本地一键起全栈：MySQL + 后端 + 前端
+#
+#   docker compose up -d --build
+#   打开 http://127.0.0.1:5173           （前端）
+#        http://127.0.0.1:8000/docs      （后端接口文档）
+#        http://127.0.0.1:8000/health    （真实运行模式）
+#
+# 首次启动后要跑一次迁移与演示数据：
+#   docker compose exec backend alembic upgrade head
+#   docker compose exec backend python scripts/seed_demo.py
+#   然后登录 admin / admin123
+#
+# ⚠ **本文件未实测**：开发机没有 Docker。已做的只有 `yaml` 语法解析校验与人工核对。
+#    第一次在有 Docker 的机器上跑时，最可能出问题的是：
+#      · pip/npm 在网络受限环境下装不上（镜像里已配国内源）
+#      · 模型挂载路径（见 backend 服务的 EMBEDDING_MODEL_PATH 注释）
+#      · mysql 首次初始化耗时较长（healthcheck 已给足 start_period）
+# =====================================================================================
+
+name: knowflow
+
+services:
+  # ------------------------------------------------------------------------------------
+  # MySQL 8：业务事实存储（14 张表 + alembic_version）
+  # ------------------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: knowflow-mysql
+    restart: unless-stopped
+    # ⚠ 字符集必须在 server 端设成 utf8mb4：默认的 latin1 存不了中文，
+    #   而且**建库之后再改 server 字符集也没用**（库的字符集在建库时已定死）。
+    #   utf8mb4_0900_ai_ci 是 MySQL 8 的默认排序规则，大小写不敏感，符合中文业务预期。
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      # 严格模式：类型不符/超长直接报错，而不是静默截断数据
+      - --sql-mode=STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
+      # 本地开发方便排查慢查询；生产请关掉
+      - --slow_query_log=1
+      - --long_query_time=1
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: knowflow
+      TZ: UTC
+    ports:
+      # 暴露到宿主机方便用客户端连（只想容器内互访可删掉这段）
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # ⚠ 用 mysqladmin ping 而不是 `mysql -e 'select 1'`：
+      #   后者在初始化阶段会因为 root 密码还没生效而失败，导致健康检查永远不通过。
+      #   start_period 给 40s：MySQL 8 首次初始化（建系统表 + 建库）比较慢。
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks: [knowflow]
+
+  # ------------------------------------------------------------------------------------
+  # 后端：FastAPI + LangGraph + Chroma + 本地 BGE-M3
+  # ------------------------------------------------------------------------------------
+  backend:
+    build:
+      context: .                                  # 构建上下文必须是仓库根（要拷 data/samples）
+      dockerfile: backend/Dockerfile
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        # 改成 1 就在构建时下载 BGE-M3 权重（镜像 +2GB，但开箱即用）
+        PRELOAD_MODEL: "0"
+    container_name: knowflow-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy                # 等 MySQL 真的能 ping 通再起
+    environment:
+      ENV: dev
+      DEBUG: "true"
+      HOST: 0.0.0.0
+      PORT: "8000"
+      # ⚠ 容器内要用服务名 `mysql`，不是 127.0.0.1（那是容器自己的回环口）
+      DATABASE_URL: mysql+pymysql://root:1234@mysql:3306/knowflow?charset=utf8mb4
+      # ⚠ DATA_DIR 与 DATABASE_URL 是**一一对应**的（见 docs/00 第 8 节）。
+      #   向量库和关系库必须指向"同一套数据"，挂错卷就会串库。
+      DATA_DIR: /app/data
+      # --- 模型：默认走本地 BGE-M3。二选一 ---
+      # A) 运行时挂载宿主机已下好的模型（推荐，完全离线、镜像小）
+      #    把下面两行的注释打开，并把 ${HF_CACHE} 换成你的路径（Windows 上如 C:/Users/you/.cache/huggingface）
+      # EMBEDDING_MODEL_PATH: /models/hf/models--BAAI--bge-m3/snapshots/<sha>
+      # HF_HUB_OFFLINE: "1"
+      # B) 用哈希向量兜底把链路跑通（零依赖、零下载，但检索质量差，仅用于验证部署）
+      # EMBEDDING_PROVIDER: hash
+      EMBEDDING_PROVIDER: local
+      # --- 大模型：留空 = 离线模式（抽取式回答）。
+      #     接真实模型只需填 Key 与 base_url，代码零改动（OpenAI 兼容协议）。
+      OPENAI_API_KEY: ""
+      OPENAI_BASE_URL: https://api.deepseek.com/v1
+      OPENAI_MODEL: deepseek-chat
+      # 生产必须改成一个 >=32 字节的随机串
+      JWT_SECRET: change-me-in-production
+      LOG_LEVEL: INFO
+      LOG_JSON: "true"                            # 容器里用 JSON，便于收集
+      HF_ENDPOINT: https://hf-mirror.com
+    ports:
+      - "8000:8000"
+    volumes:
+      # 上传原文件 / 向量库 / checkpointer 都要持久化，否则重建容器即丢索引
+      - app_data:/app/data
+      # 模型目录（选择 A 时打开；只读挂载）
+      # - ${HF_CACHE:-~/.cache/huggingface}:/models/hf:ro
+    networks: [knowflow]
+
+  # ------------------------------------------------------------------------------------
+  # 前端：Vue 3 构建产物 + nginx（SPA fallback + /api 反代 + SSE 关缓冲）
+  # ------------------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: knowflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # 宿主 5173 -> 容器 80，与 `pnpm dev` 的端口一致，少记一个地址
+      - "5173:80"
+    networks: [knowflow]
+
+volumes:
+  mysql_data:
+    name: knowflow_mysql_data
+  app_data:
+    name: knowflow_app_data
+
+networks:
+  knowflow:
+    name: knowflow_net
